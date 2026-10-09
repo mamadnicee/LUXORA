@@ -3,28 +3,24 @@
    محصولات، گالری، نظرات، سبد خرید، واتساپ
    ============================================================ */
 
-/* ---------- CONFIG — فقط اینجا رو تنظیم کن ---------- */
+/* ---------- CONFIG (تنظیمات پایه) ---------- */
 const CONFIG = {
-  whatsapp: '989120000000',                 // شماره واتساپ فروشگاه
+  whatsapp: '989120000000',      // شماره واتساپ فروشگاه
   currency: 'تومان',
-  // تعداد محصولات و تصاویر: کافیه شماره‌ها رو ادامه بدی
-  products: [
-    { id: 1, name: 'رویال کلاسیک',   desc: 'بدنه استیل، موتور اتوماتیک',   price: 12500000, tag: 'ویژه' },
-    { id: 2, name: 'نوکتورن بلک',    desc: 'ضدآب، طراحی مینیمال',          price: 9800000,  tag: '' },
-    { id: 3, name: 'آستریا گلد',     desc: 'روکش طلایی، صفحه مروارید',     price: 18900000, tag: 'جدید' },
-    { id: 4, name: 'کرونو اسپرت',    desc: 'کرنوگراف، استیل مات',          price: 11200000, tag: '' },
-    { id: 5, name: 'لونا رزگلد',     desc: 'بند چرم، طراحی زنانه',         price: 8400000,  tag: 'محبوب' },
-    { id: 6, name: 'اورست تیتانیوم', desc: 'بدنه تیتانیوم، ضدنخش',         price: 24500000, tag: 'ویژه' },
-    { id: 7, name: 'مینیمال وایت',   desc: 'صفحه سفید، بند سیلیکون',       price: 6900000,  tag: '' },
-    { id: 8, name: 'هریتیج براون',   desc: 'طرح کلاسیک، بند چرم قهوه‌ای',  price: 13900000, tag: 'جدید' }
-  ],
+  // مسیر محصولات و گالری: از products.json خونده می‌شه
+  productsFile: 'products.json',
+  // لیست عکس‌های گالری (فقط شماره‌ی فایل عکس در پوشه assets/images/)
+  // ترتیب هرچی که اینجا باشه همون‌طور نمایش داده می‌شه.
   gallery: [
-    { label: 'جزئیات موتور' },
-    { label: 'بند چرم' },
-    { label: 'صفحه مروارید' },
-    { label: 'طراحی بدنه' },
-    { label: 'بازل استیل' },
-    { label: 'بسته‌بندی لوکس' }
+    { img: '1', label: 'کلکسیون کلاسیک' },
+    { img: '2', label: 'طراحی مدرن' },
+    { img: '3', label: 'جزئیات بدنه' },
+    { img: '4', label: 'بند چرم' },
+    { img: '5', label: 'صفحه مروارید' },
+    { img: '6', label: 'بازل استیل' },
+    { img: '7', label: 'بسته‌بندی لوکس' },
+    { img: '8', label: 'ساخت دست' },
+    { img: '9', label: 'کلکسیون ویژه' }
   ],
   testimonials: [
     { text: 'کیفیت و اصالت ساعت فوق‌العاده بود. دقیقاً همون چیزی که توی عکس‌ها دیدم.', author: 'سارا محمدی', role: 'مشتری' },
@@ -36,27 +32,48 @@ const CONFIG = {
 /* ---------- Helpers ---------- */
 const $  = (s, c = document) => c.querySelector(s);
 const $$ = (s, c = document) => [...c.querySelectorAll(s)];
-const toFa = n => n.toLocaleString('fa-IR');
+const toFa = n => Number(n).toLocaleString('fa-IR');
 const imgPath = n => `assets/images/${n}.jpg`;
 
-/* ---------- 1. RENDER PRODUCTS ---------- */
+/* ---------- State ---------- */
+let PRODUCTS = [];
+
+/* ---------- 1. LOAD PRODUCTS FROM JSON ---------- */
+async function loadProducts() {
+  try {
+    const res = await fetch(CONFIG.productsFile, { cache: 'no-store' });
+    if (!res.ok) throw new Error('products.json not found');
+    PRODUCTS = await res.json();
+  } catch (err) {
+    console.warn('products.json قابل خواندن نبود، از داده‌ی پیش‌فرض استفاده می‌شود.', err);
+    PRODUCTS = [];
+  }
+}
+
+/* ---------- 2. RENDER PRODUCTS ---------- */
 function renderProducts() {
   const grid = $('#productsGrid');
   if (!grid) return;
-  grid.innerHTML = CONFIG.products.map((p, i) => `
+
+  if (!PRODUCTS.length) {
+    grid.innerHTML = '<div class="cart-empty" style="grid-column:1/-1;text-align:center;padding:3rem 0;color:var(--c-muted)">محصولی برای نمایش وجود ندارد.</div>';
+    return;
+  }
+
+  grid.innerHTML = PRODUCTS.map((p, i) => `
     <article class="product-card reveal" style="transition-delay:${i * 60}ms">
       <div class="product-media">
         ${p.tag ? `<span class="product-tag">${p.tag}</span>` : ''}
-        <img src="${imgPath(p.id)}" alt="${p.name}" loading="lazy"
-             onerror="this.style.background='linear-gradient(135deg,#e9e4d8,#d6cfbf)';this.removeAttribute('src')">
+        <img src="${imgPath(p.id)}" alt="${p.name || ''}" loading="lazy"
+             onerror="this.style.display='none'">
       </div>
       <div class="product-body">
-        <h3 class="product-name">${p.name}</h3>
-        <p class="product-desc">${p.desc}</p>
+        <h3 class="product-name">${p.name || ''}</h3>
+        <p class="product-desc">${p.desc || ''}</p>
         <div class="product-foot">
-          <span class="product-price">${toFa(p.price)}<small>${CONFIG.currency}</small></span>
+          <span class="product-price">${toFa(p.price || 0)}<small>${CONFIG.currency}</small></span>
           <button class="add-btn" data-add="${p.id}" aria-label="افزودن به سبد">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
               <path d="M12 5v14M5 12h14"/>
             </svg>
           </button>
@@ -66,23 +83,31 @@ function renderProducts() {
   `).join('');
 }
 
-/* ---------- 2. RENDER GALLERY ---------- */
+/* ---------- 3. RENDER GALLERY ---------- */
 function renderGallery() {
   const track = $('#galleryTrack');
+  const dots  = $('#galleryDots');
   if (!track) return;
-  const items = [...CONFIG.gallery, ...CONFIG.gallery]; // دوباره برای اسکرول پیوسته
-  track.innerHTML = items.map((g, i) => `
-    <div class="gallery-item reveal" data-label="${g.label}" style="transition-delay:${i * 80}ms">
-      <img src="${imgPath('g' + ((i % CONFIG.gallery.length) + 1))}" alt="${g.label}" loading="lazy"
-           onerror="this.style.background='linear-gradient(135deg,#1c3b5a,#0d0f12)';this.removeAttribute('src')">
+
+  track.innerHTML = CONFIG.gallery.map((g, i) => `
+    <div class="gallery-item" data-label="${g.label || ''}" data-index="${i}">
+      <img src="${imgPath(g.img)}" alt="${g.label || ''}" loading="lazy" draggable="false"
+           onerror="this.style.display='none'">
     </div>
   `).join('');
+
+  if (dots) {
+    dots.innerHTML = CONFIG.gallery.map((_, i) =>
+      `<button data-dot="${i}" ${i === 0 ? 'class="active"' : ''} aria-label="تصویر ${i + 1}"></button>`
+    ).join('');
+  }
 }
 
-/* ---------- 3. RENDER TESTIMONIALS ---------- */
+/* ---------- 4. RENDER TESTIMONIALS ---------- */
 function renderTestimonials() {
   const track = $('#testiTrack'), dots = $('#testiDots');
   if (!track) return;
+
   track.innerHTML = CONFIG.testimonials.map(t => `
     <div class="testi-item">
       <blockquote>${t.text}</blockquote>
@@ -90,6 +115,7 @@ function renderTestimonials() {
       <div class="testi-role">${t.role}</div>
     </div>
   `).join('');
+
   dots.innerHTML = CONFIG.testimonials.map((_, i) =>
     `<button data-dot="${i}" ${i === 0 ? 'class="active"' : ''} aria-label="نظر ${i + 1}"></button>`
   ).join('');
@@ -97,17 +123,21 @@ function renderTestimonials() {
   let idx = 0;
   const go = i => {
     idx = i;
-    track.style.transform = `translateX(${i * 100}%)`; // RTL: به راست حرکت
+    track.style.transform = `translateX(${i * 100}%)`;
     $$('#testiDots button').forEach((b, k) => b.classList.toggle('active', k === i));
   };
   dots.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
     go(+b.dataset.dot);
   });
-  setInterval(() => go((idx + 1) % CONFIG.testimonials.length), 5500);
+  let timer = setInterval(() => go((idx + 1) % CONFIG.testimonials.length), 5500);
+  track.parentElement.addEventListener('mouseenter', () => clearInterval(timer));
+  track.parentElement.addEventListener('mouseleave', () => {
+    timer = setInterval(() => go((idx + 1) % CONFIG.testimonials.length), 5500);
+  });
 }
 
-/* ---------- 4. SCROLL REVEAL ---------- */
+/* ---------- 5. SCROLL REVEAL ---------- */
 function initReveal() {
   const io = new IntersectionObserver(entries => {
     entries.forEach(en => {
@@ -120,7 +150,7 @@ function initReveal() {
   $$('.reveal').forEach(el => io.observe(el));
 }
 
-/* ---------- 5. HEADER SCROLL ---------- */
+/* ---------- 6. HEADER SCROLL ---------- */
 function initHeader() {
   const header = $('#header');
   const onScroll = () => header.classList.toggle('scrolled', window.scrollY > 40);
@@ -128,78 +158,133 @@ function initHeader() {
   window.addEventListener('scroll', onScroll, { passive: true });
 }
 
-/* ---------- 6. MOBILE NAV ---------- */
+/* ---------- 7. MOBILE NAV ---------- */
 function initNav() {
   const burger = $('#burger'), nav = $('#nav');
   burger?.addEventListener('click', () => {
-    burger.classList.toggle('open');
-    nav.classList.toggle('open');
+    const open = burger.classList.toggle('open');
+    nav.classList.toggle('open', open);
+    burger.setAttribute('aria-expanded', open);
   });
   nav?.addEventListener('click', e => {
     if (e.target.tagName === 'A') {
       burger.classList.remove('open');
       nav.classList.remove('open');
+      burger.setAttribute('aria-expanded', 'false');
     }
   });
 }
 
-/* ---------- 7. HERO PARALLAX ---------- */
+/* ---------- 8. HERO PARALLAX ---------- */
 function initParallax() {
   const img = $('.hero-bg img');
   if (!img) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
   let raf;
   window.addEventListener('scroll', () => {
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(() => {
       const y = Math.min(window.scrollY, window.innerHeight);
-      img.style.transform = `translate3d(0, ${y * 0.35}px, 0) scale(1.05)`;
+      img.style.transform = `translate3d(0, ${y * 0.3}px, 0) scale(1.06)`;
     });
   }, { passive: true });
 }
 
-/* ---------- 8. GALLERY DRAG (اختیاری، برای دسکتاپ) ---------- */
-function initGalleryDrag() {
+/* ---------- 9. GALLERY SCROLL & DRAG ---------- */
+function initGallery() {
   const track = $('#galleryTrack');
+  const wrap  = $('#galleryWrap');
+  const dots  = $('#galleryDots');
+  const arrows = $$('.gallery-arrow');
   if (!track) return;
-  let isDown = false, startX = 0, scroll = 0;
-  const wrap = track.parentElement;
-  track.addEventListener('mousedown', e => {
-    isDown = true; startX = e.pageX; scroll = track.scrollLeft;
-    track.style.cursor = 'grabbing';
+
+  const itemWidth = () => {
+    const item = track.querySelector('.gallery-item');
+    if (!item) return 300;
+    const gap = parseFloat(getComputedStyle(track).gap) || 16;
+    return item.getBoundingClientRect().width + gap;
+  };
+
+  const scrollByStep = dir => {
+    const step = itemWidth();
+    track.scrollBy({ left: dir === 'next' ? step : -step, behavior: 'smooth' });
+  };
+
+  arrows.forEach(a => {
+    a.addEventListener('click', () => scrollByStep(a.dataset.dir));
   });
-  window.addEventListener('mouseup', () => { isDown = false; track.style.cursor = 'grab'; });
+
+  // دات‌های گالری
+  dots?.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const i = +b.dataset.dot;
+    track.scrollTo({ left: itemWidth() * i, behavior: 'smooth' });
+  });
+
+  // آپدیت دات فعال در حین اسکرول
+  const updateActiveDot = () => {
+    if (!dots) return;
+    const w = itemWidth();
+    const idx = Math.round(track.scrollLeft / w);
+    $$('#galleryDots button').forEach((b, k) => b.classList.toggle('active', k === idx));
+  };
+  track.addEventListener('scroll', () => {
+    clearTimeout(track._t);
+    track._t = setTimeout(updateActiveDot, 60);
+  }, { passive: true });
+
+  // Drag با موس (فقط دسکتاپ)
+  let isDown = false, startX = 0, startScroll = 0;
+  track.addEventListener('mousedown', e => {
+    isDown = true;
+    startX = e.pageX;
+    startScroll = track.scrollLeft;
+    wrap.classList.add('dragging');
+  });
+  window.addEventListener('mouseup', () => {
+    isDown = false;
+    wrap.classList.remove('dragging');
+  });
   track.addEventListener('mousemove', e => {
     if (!isDown) return;
     e.preventDefault();
-    track.scrollLeft = scroll - (e.pageX - startX);
+    track.scrollLeft = startScroll - (e.pageX - startX) * 1.2;
   });
-  track.style.cursor = 'grab';
-  // اسکرول خودکار نرم
-  let auto = 0;
-  setInterval(() => {
-    if (isDown) return;
-    auto += 0.6;
-    if (auto >= track.scrollWidth / 2) auto = 0;
-    track.scrollLeft = auto;
-  }, 30);
+
+  // Wheel افقی روی گالری (برای دسکتاپ وقتی موس روی گالری‌ست)
+  track.addEventListener('wheel', e => {
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      // اجازه بده اسکرول عمودی صفحه ادامه پیدا کنه، فقط اگه انتهای گالری بود
+      const atStart = track.scrollLeft <= 0;
+      const atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 1;
+      if ((e.deltaY < 0 && atStart) || (e.deltaY > 0 && atEnd)) return;
+      e.preventDefault();
+      track.scrollLeft += e.deltaY;
+    }
+  }, { passive: false });
 }
 
-/* ---------- 9. CART ---------- */
+/* ---------- 10. CART ---------- */
 const Cart = {
   key: 'luxora_cart',
-  items: JSON.parse(localStorage.getItem('luxora_cart') || '[]'),
+  items: [],
+  init() {
+    try { this.items = JSON.parse(localStorage.getItem(this.key) || '[]'); }
+    catch { this.items = []; }
+  },
   save() { localStorage.setItem(this.key, JSON.stringify(this.items)); },
   add(id) {
-    const p = CONFIG.products.find(x => x.id === id);
+    const p = PRODUCTS.find(x => Number(x.id) === Number(id));
     if (!p) return;
-    const ex = this.items.find(i => i.id === id);
+    const ex = this.items.find(i => Number(i.id) === Number(id));
     if (ex) ex.qty++;
-    else this.items.push({ id, name: p.name, price: p.price, qty: 1 });
+    else this.items.push({ id: p.id, name: p.name, price: p.price, qty: 1 });
     this.save(); this.render();
     UI.flashCount();
   },
   remove(id) {
-    this.items = this.items.filter(i => i.id !== id);
+    this.items = this.items.filter(i => Number(i.id) !== Number(id));
     this.save(); this.render();
   },
   total() { return this.items.reduce((s, i) => s + i.price * i.qty, 0); },
@@ -207,6 +292,7 @@ const Cart = {
   render() {
     const wrap = $('#cartItems');
     const count = $('#cartCount');
+    if (!wrap) return;
     count.textContent = toFa(this.count());
     count.classList.toggle('active', this.count() > 0);
     $('#cartTotal').textContent = toFa(this.total()) + ' ' + CONFIG.currency;
@@ -217,8 +303,7 @@ const Cart = {
     }
     wrap.innerHTML = this.items.map(i => `
       <div class="cart-item">
-        <img src="${imgPath(i.id)}" alt="${i.name}"
-             onerror="this.style.background='linear-gradient(135deg,#e9e4d8,#d6cfbf)';this.removeAttribute('src')">
+        <img src="${imgPath(i.id)}" alt="${i.name}" onerror="this.style.display='none'">
         <div>
           <div class="cart-item-name">${i.name} × ${toFa(i.qty)}</div>
           <div class="cart-item-price">${toFa(i.price * i.qty)} ${CONFIG.currency}</div>
@@ -256,9 +341,9 @@ function initCart() {
 
   document.addEventListener('click', e => {
     const add = e.target.closest('[data-add]');
-    if (add) return Cart.add(+add.dataset.add);
+    if (add) return Cart.add(add.dataset.add);
     const rm = e.target.closest('[data-remove]');
-    if (rm) return Cart.remove(+rm.dataset.remove);
+    if (rm) return Cart.remove(rm.dataset.remove);
   });
 
   $('#checkoutBtn')?.addEventListener('click', () => {
@@ -277,8 +362,10 @@ function initCart() {
   Cart.render();
 }
 
-/* ---------- 10. INIT ---------- */
-document.addEventListener('DOMContentLoaded', () => {
+/* ---------- 11. INIT ---------- */
+document.addEventListener('DOMContentLoaded', async () => {
+  Cart.init();
+  await loadProducts();
   renderProducts();
   renderGallery();
   renderTestimonials();
@@ -286,6 +373,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initHeader();
   initNav();
   initParallax();
-  initGalleryDrag();
+  initGallery();
   initCart();
 });
